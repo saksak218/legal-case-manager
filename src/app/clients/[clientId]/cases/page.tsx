@@ -35,7 +35,7 @@ import {
   Contact,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -202,7 +202,7 @@ export default function ClientCasesPage() {
           <div className="flex items-center space-x-2">
             <Calendar className="w-4 h-4 text-green-600" />
             <span className="text-gray-600 text-sm">
-              {format(parseISO(date), "MMM dd, yyyy")}
+              {format(date, "MMM dd, yyyy")}
             </span>
           </div>
         ) : (
@@ -384,7 +384,7 @@ export default function ClientCasesPage() {
           .limit(1)
           .single();
 
-        updateData.sr_no = (maxSrNo?.sr_no || 0) + 1;
+        // updateData.sr_no = (maxSrNo?.sr_no || 0) + 1;
 
         const { error } = await supabase.from("cases").insert(updateData);
         if (error) throw error;
@@ -424,11 +424,9 @@ export default function ClientCasesPage() {
         court_name: c.court_name || "",
         case_decision: c.case_decision || "",
         previous_date: c.previous_date
-          ? format(parseISO(c.previous_date), "yyyy-MM-dd")
+          ? format(c.previous_date, "yyyy-MM-dd")
           : "",
-        next_date: c.next_date
-          ? format(parseISO(c.next_date), "yyyy-MM-dd")
-          : "",
+        next_date: c.next_date ? format(c.next_date, "yyyy-MM-dd") : "",
         total_fee: c.total_fee || 0,
         received_fee: c.received_fee || 0,
       });
