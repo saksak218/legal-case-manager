@@ -41,7 +41,7 @@ export default function RootLayout({
               <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 min-h-screen">
                 <Navbar />
                 <main className="mx-auto px-4 py-8 max-w-7xl container">
-                  <div className="bg-white/80 shadow-2xl backdrop-blur-sm p-8 border border-white/20 rounded-3xl">
+                  <div className="bg-white/70 shadow-2xl backdrop-blur-sm p-8 border border-white/20 rounded-3xl">
                     {children}
                   </div>
                 </main>
