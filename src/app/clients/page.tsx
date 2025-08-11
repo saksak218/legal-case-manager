@@ -11,8 +11,15 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Pencil, Trash, Plus } from "lucide-react";
+import {
+  Pencil,
+  Trash,
+  Plus,
+  Users,
+  UserPlus,
+  Building,
+  Eye,
+} from "lucide-react";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import { z } from "zod";
@@ -27,14 +34,22 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { ColumnDef } from "@tanstack/react-table";
-import { DataTable } from "@/components/data-table"; // Assuming Shadcn DataTable component
+import { EnhancedDataTable } from "@/components/data-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@radix-ui/react-tooltip";
 
 interface Client {
   id: string;
   name: string;
   contact_number: string;
   address: string;
+  case_count?: number;
+  cases?: object;
 }
 
 const clientSchema = z.object({
@@ -45,58 +60,109 @@ const clientSchema = z.object({
 
 type ClientForm = z.infer<typeof clientSchema>;
 
-const columns: ColumnDef<Client>[] = [
-  {
-    accessorKey: "name",
-    header: "Name",
-  },
-  {
-    accessorKey: "contact_number",
-    header: "Contact",
-  },
-  {
-    accessorKey: "address",
-    header: "Address",
-  },
-  {
-    id: "actions",
-    cell: ({ row }) => (
-      <div className="flex gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => row.original.handleEdit(row.original)}
-        >
-          <Pencil size={16} />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => row.original.handleDelete(row.original.id)}
-        >
-          <Trash size={16} />
-        </Button>
-        <Link
-          href={`/clients/${row.original.id}/cases`}
-          className="text-blue-500 hover:underline"
-        >
-          View Cases
-        </Link>
-      </div>
-    ),
-  },
-];
-
 export default function ClientsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [open, setOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState({
+    total: 0,
+    withCases: 0,
+    totalCases: 0,
+  });
 
   const form = useForm<ClientForm>({
     resolver: zodResolver(clientSchema),
     defaultValues: { name: "", contact_number: "", address: "" },
   });
+
+  const columns: ColumnDef<Client>[] = [
+    {
+      accessorKey: "name",
+      header: "Client Name",
+      cell: ({ row }) => (
+        <div className="flex items-center space-x-3">
+          <div className="flex justify-center items-center bg-blue-100 rounded-full w-8 h-8">
+            <Users className="w-4 h-4 text-blue-600" />
+          </div>
+          <div>
+            <p className="font-medium text-gray-900">{row.getValue("name")}</p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "contact_number",
+      header: "Contact",
+      cell: ({ row }) => (
+        <span className="text-gray-600">
+          {row.getValue("contact_number") || "N/A"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "address",
+      header: "Address",
+      cell: ({ row }) => (
+        <div className="flex items-center space-x-2">
+          <Building className="w-4 h-4 text-gray-400" />
+          <span className="max-w-xs text-gray-600 truncate">
+            {row.getValue("address") || "N/A"}
+          </span>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "case_count",
+      header: "Cases",
+      cell: ({ row }) => (
+        <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+          {/* {row.original.cases[0].count ?? 0} */}
+          {row.original.case_count || 0} cases
+        </Badge>
+      ),
+    },
+    {
+      accessorKey: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <div className="flex items-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => openModal(row.original)}
+            className="hover:bg-blue-50 text-blue-600 hover:text-blue-800 cursor-pointer"
+          >
+            <Pencil size={14} className="mr-1" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleDelete(row.original.id)}
+            className="hover:bg-red-50 text-red-600 hover:text-red-800 cursor-pointer"
+          >
+            <Trash size={14} className="mr-1" />
+          </Button>
+
+          <Tooltip>
+            <TooltipTrigger>
+              <Link
+                href={`/clients/${row.original.id}/cases`}
+                className="inline-flex hover:bg-green-50 px-2.5 py-1.5 rounded-sm text-green-600 hover:text-green-800"
+              >
+                <Eye size={14} className="mr-1" />
+              </Link>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p className="bg-gray-600 px-2 py-1 rounded-full text-white text-xs">
+                View Cases
+              </p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      ),
+    },
+  ];
 
   useEffect(() => {
     loadClients();
@@ -104,11 +170,38 @@ export default function ClientsPage() {
 
   async function loadClients() {
     setLoading(true);
-    const { data, error } = await supabase.from("clients").select("*");
-    if (error) {
+    try {
+      // Get clients with case count
+      const { data: clientsData, error: clientsError } = await supabase.from(
+        "clients"
+      ).select(`
+          *,
+          cases(count)
+        `);
+
+      if (clientsError) throw clientsError;
+
+      const clientsWithCounts = (clientsData || []).map((client) => ({
+        ...client,
+        case_count: client.cases[0].count || 0,
+      }));
+
+      setClients(clientsWithCounts);
+
+      // Calculate stats
+      const total = clientsWithCounts.length;
+      const withCases = clientsWithCounts.filter(
+        (c) => c.case_count > 0
+      ).length;
+      const totalCases = clientsWithCounts.reduce(
+        (sum, c) => sum + c.case_count,
+        0
+      );
+      //   console.log(withCases);
+
+      setStats({ total, withCases, totalCases });
+    } catch (error) {
       toast.error("Failed to load clients");
-    } else {
-      setClients(data || []);
     }
     setLoading(false);
   }
@@ -122,14 +215,15 @@ export default function ClientsPage() {
           .update(values)
           .eq("id", editingClient.id);
         if (error) throw error;
-        toast.success("Client updated");
+        toast.success("Client updated successfully");
       } else {
         const { error } = await supabase.from("clients").insert(values);
         if (error) throw error;
-        toast.success("Client added");
+        toast.success("Client added successfully");
       }
       setOpen(false);
       loadClients();
+      form.reset();
     } catch (error) {
       toast.error("Operation failed");
     }
@@ -137,13 +231,17 @@ export default function ClientsPage() {
   }
 
   async function handleDelete(id: string) {
-    if (confirm("Delete this client and all their cases?")) {
+    if (
+      confirm(
+        "Are you sure you want to delete this client and all their cases?"
+      )
+    ) {
       setLoading(true);
       const { error } = await supabase.from("clients").delete().eq("id", id);
       if (error) {
-        toast.error("Failed to delete");
+        toast.error("Failed to delete client");
       } else {
-        toast.success("Client deleted");
+        toast.success("Client deleted successfully");
         loadClients();
       }
       setLoading(false);
@@ -153,7 +251,11 @@ export default function ClientsPage() {
   function openModal(client?: Client) {
     if (client) {
       setEditingClient(client);
-      form.reset(client);
+      form.reset({
+        name: client.name,
+        contact_number: client.contact_number || "",
+        address: client.address || "",
+      });
     } else {
       setEditingClient(null);
       form.reset({ name: "", contact_number: "", address: "" });
@@ -161,89 +263,194 @@ export default function ClientsPage() {
     setOpen(true);
   }
 
-  const tableData = clients.map((client) => ({
-    ...client,
-    handleEdit: openModal,
-    handleDelete,
-  }));
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex justify-between items-center">
-          Clients
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => openModal()}>
-                <Plus size={16} className="mr-2" /> Add Client
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {editingClient ? "Edit Client" : "Add Client"}
-                </DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(handleSubmit)}
-                  className="space-y-4"
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="space-y-4 text-center">
+        <div className="flex justify-center items-center gap-3">
+          <Users className="w-8 h-8 text-blue-600" />
+          <h1 className="bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 font-bold text-transparent text-4xl">
+            Client Management
+          </h1>
+        </div>
+        <p className="text-gray-600 text-lg">
+          Manage your clients and their legal matters
+        </p>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="gap-6 grid grid-cols-1 md:grid-cols-3">
+        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 shadow-lg border-blue-200">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-medium text-blue-600">Total Clients</p>
+                <p className="font-bold text-blue-800 text-3xl">
+                  {stats.total}
+                </p>
+              </div>
+              <Users className="w-8 h-8 text-blue-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-green-50 to-green-100 shadow-lg border-green-200">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-medium text-green-600">Active Clients</p>
+                <p className="font-bold text-green-800 text-3xl">
+                  {stats.withCases}
+                </p>
+              </div>
+              <UserPlus className="w-8 h-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 shadow-lg border-purple-200">
+          <CardContent className="p-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-medium text-purple-600">Total Cases</p>
+                <p className="font-bold text-purple-800 text-3xl">
+                  {stats.totalCases}
+                </p>
+              </div>
+              <Building className="w-8 h-8 text-purple-600" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Clients Table */}
+      <Card className="bg-white/80 shadow-2xl backdrop-blur-sm border-white/20">
+        <CardHeader>
+          <div className="flex justify-between items-center">
+            <CardTitle className="font-semibold text-gray-800 text-sm sm:text-2xl">
+              All Clients
+            </CardTitle>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button
+                  size="sm"
+                  onClick={() => openModal()}
+                  className="bg-gradient-to-r from-blue-600 hover:from-blue-700 to-indigo-600 hover:to-indigo-700 shadow-lg"
                 >
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="contact_number"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Contact Number</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="address"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Address</FormLabel>
-                        <FormControl>
-                          <Input {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <Button type="submit" disabled={loading} className="w-full">
-                    {editingClient ? "Update" : "Add"}
-                  </Button>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <p>Loading...</p>
-        ) : (
-          <DataTable columns={columns} data={tableData} />
-        )}
-      </CardContent>
-    </Card>
+                  <Plus size={16} className="mr-2" />
+                  Add
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="font-semibold text-gray-800 text-xl">
+                    {editingClient ? "Edit Client" : "Add New Client"}
+                  </DialogTitle>
+                </DialogHeader>
+                <Form {...form}>
+                  <form
+                    onSubmit={form.handleSubmit(handleSubmit)}
+                    className="space-y-6"
+                  >
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="font-medium text-gray-700">
+                            Client Name *
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="Enter client name"
+                              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="contact_number"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="font-medium text-gray-700">
+                            Contact Number
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="Enter contact number"
+                              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="address"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="font-medium text-gray-700">
+                            Address
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder="Enter address"
+                              className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex gap-3 pt-4">
+                      <Button
+                        type="submit"
+                        disabled={loading}
+                        className="flex-1 bg-gradient-to-r from-blue-600 hover:from-blue-700 to-indigo-600 hover:to-indigo-700"
+                      >
+                        {loading
+                          ? "Processing..."
+                          : editingClient
+                          ? "Update Client"
+                          : "Add Client"}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setOpen(false)}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="border-b-2 border-blue-600 rounded-full w-12 h-12 animate-spin"></div>
+              <span className="ml-3 text-gray-600">Loading clients...</span>
+            </div>
+          ) : (
+            <EnhancedDataTable
+              columns={columns}
+              data={clients}
+              searchKey="name"
+            />
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 }
