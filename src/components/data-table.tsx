@@ -137,7 +137,7 @@ export function EnhancedDataTable({
       {/* Pagination Controls */}
       <div className="flex justify-between items-center mt-4">
         <button
-          className="bg-gray-200 disabled:opacity-50 px-2 sm:px-3 py-0.5 sm:py-1 rounded cursor-pointer disabled:cursor-no-drop"
+          className="bg-gray-200 disabled:opacity-50 px-2 sm:px-3 py-0.5 sm:py-1 rounded text-gray-500 cursor-pointer disabled:cursor-no-drop"
           onClick={() => setPage((p) => Math.max(0, p - 1))}
           disabled={page === 0}
         >
@@ -148,7 +148,7 @@ export function EnhancedDataTable({
           {Math.max(1, Math.ceil(source.length / rowsPerPage))}
         </span>
         <button
-          className="bg-gray-200 disabled:opacity-50 px-2 sm:px-3 py-0.5 sm:py-1 rounded cursor-pointer disabled:cursor-no-drop"
+          className="bg-gray-200 disabled:opacity-50 px-2 sm:px-3 py-0.5 sm:py-1 rounded text-gray-500 cursor-pointer disabled:cursor-no-drop"
           onClick={() =>
             setPage((p) => ((p + 1) * rowsPerPage < source.length ? p + 1 : p))
           }
