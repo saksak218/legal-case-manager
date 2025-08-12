@@ -122,7 +122,7 @@ export function EnhancedDataTable({
           {paginatedData.map((row, rowIndex) => (
             <TableRow
               key={row.id ?? `${page}-${rowIndex}`}
-              className="hover:bg-blue-50/50 border-gray-100/50 border-b transition-colors"
+              className="hover:bg-blue-50/50 border-gray-100/50 border-b text-gray-600 transition-colors"
             >
               {columns.map((column) => (
                 <TableCell key={`${row.id ?? rowIndex}-${column.accessorKey}`}>
