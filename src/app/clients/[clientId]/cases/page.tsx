@@ -353,10 +353,84 @@ export default function ClientCasesPage() {
     setLoading(false);
   }
 
+  // async function handleSubmit(values: CaseForm) {
+  //   setLoading(true);
+  //   try {
+  //     let updateData = { ...values, client_id: clientId };
+
+  //     if (editingCase) {
+  //       const { data: oldCase } = await supabase
+  //         .from("cases")
+  //         .select("next_date")
+  //         .eq("id", editingCase.id)
+  //         .single();
+  //       if (oldCase && values.next_date !== oldCase.next_date) {
+  //         updateData.previous_date = oldCase.next_date;
+  //       }
+
+  //       const { error } = await supabase
+  //         .from("cases")
+  //         .update(updateData)
+  //         .eq("id", editingCase.id);
+  //       if (error) throw error;
+  //       toast.success("Case updated successfully");
+  //     } else {
+  //       // Get next sr_no
+  //       const { data: maxSrNo } = await supabase
+  //         .from("cases")
+  //         .select("sr_no")
+  //         .eq("client_id", clientId)
+  //         .order("sr_no", { ascending: false })
+  //         .limit(1)
+  //         .single();
+
+  //       // updateData.sr_no = (maxSrNo?.sr_no || 0) + 1;
+
+  //       const { error } = await supabase.from("cases").insert(updateData);
+  //       if (error) throw error;
+  //       toast.success("Case added successfully");
+  //     }
+  //     setOpen(false);
+  //     loadCases();
+  //     form.reset();
+  //   } catch (error) {
+  //     console.log(error);
+  //     toast.error("Operation failed");
+  //   }
+  //   setLoading(false);
+  // }
+
   async function handleSubmit(values: CaseForm) {
     setLoading(true);
     try {
-      let updateData = { ...values, client_id: clientId };
+      let updateData = {
+        ...values,
+        client_id: clientId,
+        previous_date: values.previous_date || null,
+        next_date: values.next_date || null,
+        total_fee:
+          values.total_fee === null || isNaN(values.total_fee)
+            ? null
+            : values.total_fee,
+        received_fee:
+          values.received_fee === null || isNaN(values.received_fee)
+            ? null
+            : values.received_fee,
+        case_description: values.case_description || null,
+        computer_code: values.computer_code || null,
+        case_proceeding: values.case_proceeding || null,
+        court_name: values.court_name || null,
+        case_decision: values.case_decision || null,
+      };
+
+      // Convert empty strings to null for all keys
+      Object.keys(updateData).forEach((key) => {
+        if (updateData[key] === "") {
+          updateData[key] = null;
+        }
+      });
+
+      console.log("Submitting:", updateData); // Debug
 
       if (editingCase) {
         const { data: oldCase } = await supabase
@@ -364,6 +438,7 @@ export default function ClientCasesPage() {
           .select("next_date")
           .eq("id", editingCase.id)
           .single();
+
         if (oldCase && values.next_date !== oldCase.next_date) {
           updateData.previous_date = oldCase.next_date;
         }
@@ -372,6 +447,7 @@ export default function ClientCasesPage() {
           .from("cases")
           .update(updateData)
           .eq("id", editingCase.id);
+
         if (error) throw error;
         toast.success("Case updated successfully");
       } else {
@@ -384,16 +460,18 @@ export default function ClientCasesPage() {
           .limit(1)
           .single();
 
-        // updateData.sr_no = (maxSrNo?.sr_no || 0) + 1;
+        updateData.sr_no = (maxSrNo?.sr_no || 0) + 1;
 
         const { error } = await supabase.from("cases").insert(updateData);
         if (error) throw error;
         toast.success("Case added successfully");
       }
+
       setOpen(false);
       loadCases();
       form.reset();
     } catch (error) {
+      console.log(error);
       toast.error("Operation failed");
     }
     setLoading(false);
