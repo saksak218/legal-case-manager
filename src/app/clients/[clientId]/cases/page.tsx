@@ -828,7 +828,7 @@ export default function ClientCasesPage() {
                       <Button
                         type="button"
                         onClick={() => setOpen(false)}
-                        className="flex-1 bg-gray-600"
+                        className="flex-1 bg-gray-500 hover:bg-gray-600"
                       >
                         Cancel
                       </Button>
