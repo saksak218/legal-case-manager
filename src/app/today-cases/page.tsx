@@ -45,15 +45,15 @@ export default function TodayCasesPage() {
       accessorKey: "actions",
       header: "Actions",
       cell: (row: TodayCase) => (
-        <div className="flex gap-2">
+        <div className="flex gap-2 text-black">
           <Link
             href={`/clients/${row.client_id}/cases`}
-            className="font-medium text-blue-600 hover:text-blue-800"
+            className="font-medium text-black"
           >
             <Button
               variant="ghost"
               size="sm"
-              className="text-blue-600 hover:text-blue-800"
+              className="bg-green-500 hover:bg-green-600 text-black"
             >
               <Eye />
               View

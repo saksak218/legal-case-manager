@@ -282,23 +282,23 @@ export default function ClientCasesPage() {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <div className="flex items-center">
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => openModal(row.original)}
-            className="hover:bg-blue-50 text-blue-600 hover:text-blue-800"
+            className="bg-blue-500 hover:bg-blue-600"
           >
-            <Pencil size={14} className="mr-1" />
+            <Pencil size={14} />
             {/* Edit */}
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => handleDelete(row.original.id)}
-            className="hover:bg-red-50 text-red-600 hover:text-red-800"
+            className="bg-red-500 hover:bg-red-600"
           >
-            <Trash size={14} className="mr-1" />
+            <Trash size={14} />
             {/* Delete */}
           </Button>
         </div>
@@ -829,7 +829,7 @@ export default function ClientCasesPage() {
                         type="button"
                         variant="outline"
                         onClick={() => setOpen(false)}
-                        className="flex-1"
+                        className="flex-1 bg-gray-500"
                       >
                         Cancel
                       </Button>

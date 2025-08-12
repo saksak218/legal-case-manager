@@ -126,31 +126,31 @@ export default function ClientsPage() {
       accessorKey: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <div className="flex items-center">
+        <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => openModal(row.original)}
-            className="hover:bg-blue-50 text-blue-600 hover:text-blue-800 cursor-pointer"
+            className="bg-blue-500 hover:bg-blue-600"
           >
-            <Pencil size={14} className="mr-1" />
+            <Pencil size={14} />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => handleDelete(row.original.id)}
-            className="hover:bg-red-50 text-red-600 hover:text-red-800 cursor-pointer"
+            className="bg-red-500 hover:bg-red-600"
           >
-            <Trash size={14} className="mr-1" />
+            <Trash size={14} />
           </Button>
 
           <Tooltip>
             <TooltipTrigger>
               <Link
                 href={`/clients/${row.original.id}/cases`}
-                className="inline-flex hover:bg-green-50 px-2.5 py-1.5 rounded-sm text-green-600 hover:text-green-800"
+                className="inline-flex bg-green-500 hover:bg-green-600 px-2.5 py-2 rounded-sm text-white"
               >
-                <Eye size={14} className="mr-1" />
+                <Eye size={14} />
               </Link>
             </TooltipTrigger>
             <TooltipContent>
