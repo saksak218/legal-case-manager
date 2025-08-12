@@ -425,7 +425,7 @@ export default function ClientsPage() {
                         type="button"
                         variant="outline"
                         onClick={() => setOpen(false)}
-                        className="flex-1"
+                        className="flex-1 bg-red-500 hover:bg-red-600"
                       >
                         Cancel
                       </Button>
