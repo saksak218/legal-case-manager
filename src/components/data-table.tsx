@@ -95,7 +95,7 @@ export function EnhancedDataTable({
     <div className="overflow-x-auto">
       {searchPlaceholder && (
         <div className="flex justify-end mb-3">
-          <div className="max-w-xs">
+          <div className="w-full sm:max-w-xs">
             <input
               type="search"
               placeholder={searchPlaceholder}
@@ -107,13 +107,15 @@ export function EnhancedDataTable({
         </div>
       )}
 
-      <Table>
+      <Table className="my-10">
         {caption && <TableCaption>{caption}</TableCaption>}
 
         <TableHeader>
           <TableRow>
             {columns.map((column, i) => (
-              <TableHead key={i}>{column.header}</TableHead>
+              <TableHead key={i} className="text-xl">
+                {column.header}
+              </TableHead>
             ))}
           </TableRow>
         </TableHeader>
@@ -125,7 +127,10 @@ export function EnhancedDataTable({
               className="hover:bg-blue-50/50 border-gray-100/50 border-b text-gray-600 transition-colors"
             >
               {columns.map((column) => (
-                <TableCell key={`${row.id ?? rowIndex}-${column.accessorKey}`}>
+                <TableCell
+                  className="px-4 py-6 border border-gray-300 font-medium text-xl"
+                  key={`${row.id ?? rowIndex}-${column.accessorKey}`}
+                >
                   {renderCell(column, row)}
                 </TableCell>
               ))}

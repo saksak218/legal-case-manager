@@ -129,7 +129,7 @@ export default function ClientsPage() {
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
-            size="sm"
+            size="lg"
             onClick={() => openModal(row.original)}
             className="bg-blue-500 hover:bg-blue-600"
           >
@@ -137,7 +137,7 @@ export default function ClientsPage() {
           </Button>
           <Button
             variant="ghost"
-            size="sm"
+            size="lg"
             onClick={() => handleDelete(row.original.id)}
             className="bg-red-500 hover:bg-red-600"
           >
@@ -148,7 +148,7 @@ export default function ClientsPage() {
             <TooltipTrigger>
               <Link
                 href={`/clients/${row.original.id}/cases`}
-                className="inline-flex bg-green-500 hover:bg-green-600 px-2.5 py-2 rounded-sm text-white"
+                className="inline-flex bg-green-500 hover:bg-green-600 px-3.5 py-3 rounded-sm text-white"
               >
                 <Eye size={14} />
               </Link>
@@ -327,13 +327,13 @@ export default function ClientsPage() {
       <Card className="bg-white/80 shadow-2xl backdrop-blur-sm border-white/20">
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle className="font-semibold text-gray-800 text-sm sm:text-2xl">
+            <CardTitle className="font-semibold text-gray-800 text-lg sm:text-2xl">
               All Clients
             </CardTitle>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <Button
-                  size="sm"
+                  size="lg"
                   onClick={() => openModal()}
                   className="bg-gradient-to-r from-blue-600 hover:from-blue-700 to-indigo-600 hover:to-indigo-700 shadow-lg"
                 >

@@ -160,9 +160,21 @@ export default function ClientCasesPage() {
             <p className="font-medium text-gray-900">
               {row.getValue("case_title")}
             </p>
-            <p className="text-gray-500 text-sm">
-              {row.original.computer_code}
-            </p>
+            {/* <p className="text-gray-500 text-sm"> */}
+            {/* {row.original.computer_code} */}
+            {/* </p> */}
+          </div>
+        </div>
+      ),
+    },
+    {
+      accessorKey: "computer_code",
+      header: "Computer Code",
+      cell: ({ row }) => (
+        <div className="flex items-center space-x-2">
+          <FileText className="w-4 h-4 text-blue-600" />
+          <div>
+            <p className="text-gray-500">{row.original.computer_code}</p>
           </div>
         </div>
       ),
@@ -185,7 +197,10 @@ export default function ClientCasesPage() {
       cell: ({ row }) => {
         const proceeding = row.getValue("case_proceeding") as string;
         return proceeding ? (
-          <Badge variant="secondary" className="bg-blue-50 text-blue-700">
+          <Badge
+            variant="secondary"
+            className="bg-blue-50 text-blue-700 text-lg"
+          >
             {proceeding}
           </Badge>
         ) : (
@@ -201,7 +216,7 @@ export default function ClientCasesPage() {
         return date ? (
           <div className="flex items-center space-x-2">
             <Calendar className="w-4 h-4 text-green-600" />
-            <span className="text-gray-600 text-sm">
+            <span className="text-gray-600">
               {format(date, "MMM dd, yyyy")}
             </span>
           </div>
@@ -216,9 +231,9 @@ export default function ClientCasesPage() {
       cell: ({ row }) => {
         const status = row.getValue("status") as string;
         const statusColors = {
-          Active: "bg-green-100 text-green-800",
-          Closed: "bg-gray-100 text-gray-800",
-          Pending: "bg-yellow-100 text-yellow-800",
+          Active: "bg-green-100 text-lg  text-green-800",
+          Closed: "bg-gray-100  text-lg text-gray-800",
+          Pending: "bg-yellow-100  text-lg text-yellow-800",
         };
         return (
           <Badge
@@ -240,7 +255,7 @@ export default function ClientCasesPage() {
         const received = row.original.received_fee || 0;
         const pending = total - received;
         return (
-          <div className="text-sm">
+          <div className="">
             <div className="font-medium text-gray-900">
               Rs: {total.toLocaleString()}
             </div>
@@ -254,7 +269,7 @@ export default function ClientCasesPage() {
       cell: ({ row }) => {
         const received = row.original.received_fee || 0;
         return (
-          <div className="text-sm">
+          <div className="">
             <div className="text-green-600">
               Rs: {received.toLocaleString()}
             </div>
@@ -270,7 +285,7 @@ export default function ClientCasesPage() {
         const received = row.original.received_fee || 0;
         const pending = total - received;
         return (
-          <div className="text-sm">
+          <div>
             {pending > 0 && (
               <div className="text-red-600">Rs: {pending.toLocaleString()}</div>
             )}
@@ -285,7 +300,7 @@ export default function ClientCasesPage() {
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
-            size="sm"
+            size="lg"
             onClick={() => openModal(row.original)}
             className="bg-blue-500 hover:bg-blue-600"
           >
@@ -294,7 +309,7 @@ export default function ClientCasesPage() {
           </Button>
           <Button
             variant="ghost"
-            size="sm"
+            size="lg"
             onClick={() => handleDelete(row.original.id)}
             className="bg-red-500 hover:bg-red-600"
           >
@@ -627,13 +642,13 @@ export default function ClientCasesPage() {
       <Card className="bg-white/80 shadow-2xl backdrop-blur-sm border-white/20">
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle className="font-semibold text-gray-800 text-sm sm:text-2xl">
+            <CardTitle className="font-semibold text-gray-800 text-lg sm:text-2xl">
               Case Management
             </CardTitle>
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogTrigger asChild>
                 <Button
-                  size="sm"
+                  size="lg"
                   onClick={() => openModal()}
                   className="bg-gradient-to-r from-blue-600 hover:from-blue-700 to-indigo-600 hover:to-indigo-700 shadow-lg"
                 >

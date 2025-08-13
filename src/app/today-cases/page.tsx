@@ -52,7 +52,7 @@ export default function TodayCasesPage() {
           >
             <Button
               variant="ghost"
-              size="sm"
+              size="lg"
               className="bg-green-500 hover:bg-green-600 text-black"
             >
               <Eye />
