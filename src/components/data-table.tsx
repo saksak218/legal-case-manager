@@ -107,7 +107,7 @@ export function EnhancedDataTable({
         </div>
       )}
 
-      <Table className="my-10">
+      <Table className="my-6">
         {caption && <TableCaption>{caption}</TableCaption>}
 
         <TableHeader>
