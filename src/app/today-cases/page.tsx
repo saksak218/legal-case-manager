@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Calendar, Scale, Clock, TrendingUp, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { ColumnDef } from "@tanstack/react-table";
 
 interface TodayCase {
@@ -32,6 +33,9 @@ export default function TodayCasesPage() {
   const [cases, setCases] = useState<TodayCase[]>([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ total: 0, active: 0, completed: 0 });
+  const [selectedDate, setSelectedDate] = useState<string>(
+    format(new Date(), "yyyy-MM-dd")
+  );
 
   const columns: ColumnDef<TodayCase>[] = [
     {
@@ -163,27 +167,29 @@ export default function TodayCasesPage() {
   ];
 
   useEffect(() => {
-    loadTodayCases();
-  }, []);
+    loadCasesForDate();
+  }, [selectedDate]);
 
-  async function loadTodayCases() {
+  async function loadCasesForDate() {
     setLoading(true);
-    const today = format(new Date(), "yyyy-MM-dd");
-    console.log("Querying cases for today:", today);
+    console.log("Querying cases for date:", selectedDate);
 
+    // Query cases where the selected date matches either:
+    // 1. The next_date field, OR
+    // 2. Any date in the previous_date JSONB array
     const { data, error } = await supabase
       .from("cases")
       .select(
         `
-        *,
-        clients!inner(name)
-      `
+      *,
+      clients!inner(name)
+    `
       )
-      .eq("next_date", today);
+      .or(`next_date.eq.${selectedDate},previous_date.cs.["${selectedDate}"]`);
 
     if (error) {
-      console.error("Error fetching today's cases:", error);
-      toast.error("Failed to load today's cases: " + error.message);
+      console.error("Error fetching cases:", error);
+      toast.error("Failed to load cases: " + error.message);
     } else {
       console.log("Raw data from Supabase:", data);
       const casesWithClientNames = (data || []).map((caseItem) => ({
@@ -211,6 +217,15 @@ export default function TodayCasesPage() {
     setLoading(false);
   }
 
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newDate = e.target.value;
+    if (newDate && isValid(new Date(newDate))) {
+      setSelectedDate(newDate);
+    } else {
+      toast.error("Please select a valid date");
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -218,12 +233,22 @@ export default function TodayCasesPage() {
         <div className="flex justify-center items-center gap-3">
           <Calendar className="w-8 h-8 text-blue-600" />
           <h1 className="bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 font-bold text-transparent text-4xl">
-            Today's Cases
+            Cases for Selected Date
           </h1>
         </div>
-        <p className="text-gray-600 text-lg">
-          {format(new Date(), "EEEE, MMMM do, yyyy")}
-        </p>
+        <div className="flex justify-center items-center gap-4">
+          <Input
+            type="date"
+            value={selectedDate}
+            onChange={handleDateChange}
+            className="w-48"
+          />
+          <p className="text-gray-600 text-lg">
+            {isValid(new Date(selectedDate))
+              ? format(new Date(selectedDate), "EEEE, MMMM do, yyyy")
+              : "Select a date"}
+          </p>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -275,7 +300,10 @@ export default function TodayCasesPage() {
       <Card className="bg-white/80 shadow-2xl backdrop-blur-sm border-white/20">
         <CardHeader>
           <CardTitle className="font-semibold text-gray-800 text-2xl">
-            Cases Scheduled for Today
+            Cases Scheduled for{" "}
+            {isValid(new Date(selectedDate))
+              ? format(new Date(selectedDate), "MMMM do, yyyy")
+              : "Selected Date"}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -286,7 +314,11 @@ export default function TodayCasesPage() {
             </div>
           ) : cases.length === 0 ? (
             <div className="py-12 text-gray-600 text-center">
-              No cases scheduled for today.
+              No cases scheduled for{" "}
+              {isValid(new Date(selectedDate))
+                ? format(new Date(selectedDate), "MMMM do, yyyy")
+                : "the selected date"}
+              .
             </div>
           ) : (
             <EnhancedDataTable
