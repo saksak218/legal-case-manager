@@ -35,7 +35,7 @@ import {
   Contact,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { format } from "date-fns";
+import { format, isValid } from "date-fns";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -57,14 +57,14 @@ interface Case {
   id: string;
   sr_no: number;
   case_title: string;
-  case_description: string;
-  computer_code: string;
-  previous_date: string | null;
+  case_description: string | null;
+  computer_code: string | null;
+  previous_date: string[] | null; // JSONB array
   case_proceeding: string | null;
-  next_date: string | null;
-  total_fee: number;
-  received_fee: number;
-  court_name: string;
+  next_date: string | null; // Single date
+  total_fee: number | null;
+  received_fee: number | null;
+  court_name: string | null;
   case_decision: string | null;
   status: string;
 }
@@ -94,9 +94,21 @@ const caseSchema = z.object({
   case_title: z.string().min(1, "Title is required"),
   case_description: z.string().optional(),
   computer_code: z.string().optional(),
-  previous_date: z.string().optional(),
+  previous_date: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || (val && isValid(new Date(val))),
+      "Invalid date format for previous date"
+    ),
   case_proceeding: z.string().optional(),
-  next_date: z.string().optional(),
+  next_date: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || (val && isValid(new Date(val))),
+      "Invalid date format for next date"
+    ),
   total_fee: z.number().min(0).optional(),
   received_fee: z.number().min(0).optional(),
   court_name: z.string().optional(),
@@ -141,15 +153,6 @@ export default function ClientCasesPage() {
   });
 
   const columns: ColumnDef<Case>[] = [
-    // {
-    //   accessorKey: "sr_no",
-    //   header: "Sr. No",
-    //   cell: ({ row }) => (
-    //     <Badge variant="outline" className="bg-gray-50">
-    //       #{row.getValue("sr_no")}
-    //     </Badge>
-    //   ),
-    // },
     {
       accessorKey: "case_title",
       header: "Case Title",
@@ -158,11 +161,8 @@ export default function ClientCasesPage() {
           <FileText className="w-4 h-4 text-blue-600" />
           <div>
             <p className="font-medium text-gray-900">
-              {row.getValue("case_title")}
+              {row.getValue("case_title") || "N/A"}
             </p>
-            {/* <p className="text-gray-500 text-sm"> */}
-            {/* {row.original.computer_code} */}
-            {/* </p> */}
           </div>
         </div>
       ),
@@ -174,7 +174,9 @@ export default function ClientCasesPage() {
         <div className="flex items-center space-x-2">
           <FileText className="w-4 h-4 text-blue-600" />
           <div>
-            <p className="text-gray-500">{row.original.computer_code}</p>
+            <p className="text-gray-500">
+              {row.getValue("computer_code") || "N/A"}
+            </p>
           </div>
         </div>
       ),
@@ -213,11 +215,11 @@ export default function ClientCasesPage() {
       header: "Next Date",
       cell: ({ row }) => {
         const date = row.getValue("next_date") as string;
-        return date ? (
+        return date && isValid(new Date(date)) ? (
           <div className="flex items-center space-x-2">
             <Calendar className="w-4 h-4 text-green-600" />
             <span className="text-gray-600">
-              {format(date, "MMM dd, yyyy")}
+              {format(new Date(date), "MMM dd, yyyy")}
             </span>
           </div>
         ) : (
@@ -226,14 +228,41 @@ export default function ClientCasesPage() {
       },
     },
     {
+      accessorKey: "previous_date",
+      header: "Previous Dates",
+      cell: ({ row }) => {
+        const dates = row.getValue("previous_date") as string[] | null;
+        if (!dates || !Array.isArray(dates) || dates.length === 0) {
+          return <span className="text-gray-400">N/A</span>;
+        }
+        try {
+          const formatted = dates
+            .filter((date) => isValid(new Date(date)))
+            .map((date) => format(new Date(date), "MMM dd, yyyy"))
+            .join(", ");
+          return formatted ? (
+            <div className="flex items-center space-x-2">
+              <Clock className="w-4 h-4 text-orange-600" />
+              <span className="text-gray-600">{formatted}</span>
+            </div>
+          ) : (
+            <span className="text-gray-400">N/A</span>
+          );
+        } catch (error) {
+          console.error("Error formatting previous dates:", error);
+          return <span className="text-gray-400">Invalid dates</span>;
+        }
+      },
+    },
+    {
       accessorKey: "status",
       header: "Status",
       cell: ({ row }) => {
         const status = row.getValue("status") as string;
         const statusColors = {
-          Active: "bg-green-100 text-lg  text-green-800",
-          Closed: "bg-gray-100  text-lg text-gray-800",
-          Pending: "bg-yellow-100  text-lg text-yellow-800",
+          Active: "bg-green-100 text-lg text-green-800",
+          Closed: "bg-gray-100 text-lg text-gray-800",
+          Pending: "bg-yellow-100 text-lg text-yellow-800",
         };
         return (
           <Badge
@@ -251,9 +280,7 @@ export default function ClientCasesPage() {
       accessorKey: "total_fee",
       header: "Total fee",
       cell: ({ row }) => {
-        const total = row.original.total_fee || 0;
-        const received = row.original.received_fee || 0;
-        const pending = total - received;
+        const total = Number(row.getValue("total_fee")) || 0;
         return (
           <div className="">
             <div className="font-medium text-gray-900">
@@ -267,7 +294,7 @@ export default function ClientCasesPage() {
       accessorKey: "received_fee",
       header: "Received fee",
       cell: ({ row }) => {
-        const received = row.original.received_fee || 0;
+        const received = Number(row.getValue("received_fee")) || 0;
         return (
           <div className="">
             <div className="text-green-600">
@@ -281,8 +308,8 @@ export default function ClientCasesPage() {
       accessorKey: "pending_fee",
       header: "Pending fee",
       cell: ({ row }) => {
-        const total = row.original.total_fee || 0;
-        const received = row.original.received_fee || 0;
+        const total = Number(row.getValue("total_fee")) || 0;
+        const received = Number(row.getValue("received_fee")) || 0;
         const pending = total - received;
         return (
           <div>
@@ -305,7 +332,6 @@ export default function ClientCasesPage() {
             className="bg-blue-500 hover:bg-blue-600"
           >
             <Pencil size={14} />
-            {/* Edit */}
           </Button>
           <Button
             variant="ghost"
@@ -314,7 +340,6 @@ export default function ClientCasesPage() {
             className="bg-red-500 hover:bg-red-600"
           >
             <Trash size={14} />
-            {/* Delete */}
           </Button>
         </div>
       ),
@@ -334,7 +359,7 @@ export default function ClientCasesPage() {
       .single();
 
     if (error) {
-      toast.error("Failed to load client details");
+      toast.error("Failed to load client details: " + error.message);
     } else {
       setClient(data);
     }
@@ -349,18 +374,32 @@ export default function ClientCasesPage() {
       .order("sr_no", { ascending: true });
 
     if (error) {
-      toast.error("Failed to load cases");
+      toast.error("Failed to load cases: " + error.message);
     } else {
-      setCases(data || []);
+      // Ensure previous_date is a flat array
+      const formattedData =
+        data?.map((item) => ({
+          ...item,
+          previous_date: Array.isArray(item.previous_date)
+            ? item.previous_date.filter((date) => isValid(new Date(date)))
+            : item.previous_date
+            ? [item.previous_date].filter((date) => isValid(new Date(date)))
+            : [],
+        })) || [];
+      setCases(formattedData);
 
       // Calculate stats
-      const total = data?.length || 0;
-      const active = data?.filter((c) => c.status === "Active").length || 0;
-      const closed = data?.filter((c) => c.status === "Closed").length || 0;
-      const totalFee =
-        data?.reduce((sum, c) => sum + (c.total_fee || 0), 0) || 0;
-      const receivedFee =
-        data?.reduce((sum, c) => sum + (c.received_fee || 0), 0) || 0;
+      const total = formattedData.length;
+      const active = formattedData.filter((c) => c.status === "Active").length;
+      const closed = formattedData.filter((c) => c.status === "Closed").length;
+      const totalFee = formattedData.reduce(
+        (sum, c) => sum + (Number(c.total_fee) || 0),
+        0
+      );
+      const receivedFee = formattedData.reduce(
+        (sum, c) => sum + (Number(c.received_fee) || 0),
+        0
+      );
       const pendingFee = totalFee - receivedFee;
 
       setStats({ total, active, closed, totalFee, receivedFee, pendingFee });
@@ -368,61 +407,19 @@ export default function ClientCasesPage() {
     setLoading(false);
   }
 
-  // async function handleSubmit(values: CaseForm) {
-  //   setLoading(true);
-  //   try {
-  //     let updateData = { ...values, client_id: clientId };
-
-  //     if (editingCase) {
-  //       const { data: oldCase } = await supabase
-  //         .from("cases")
-  //         .select("next_date")
-  //         .eq("id", editingCase.id)
-  //         .single();
-  //       if (oldCase && values.next_date !== oldCase.next_date) {
-  //         updateData.previous_date = oldCase.next_date;
-  //       }
-
-  //       const { error } = await supabase
-  //         .from("cases")
-  //         .update(updateData)
-  //         .eq("id", editingCase.id);
-  //       if (error) throw error;
-  //       toast.success("Case updated successfully");
-  //     } else {
-  //       // Get next sr_no
-  //       const { data: maxSrNo } = await supabase
-  //         .from("cases")
-  //         .select("sr_no")
-  //         .eq("client_id", clientId)
-  //         .order("sr_no", { ascending: false })
-  //         .limit(1)
-  //         .single();
-
-  //       // updateData.sr_no = (maxSrNo?.sr_no || 0) + 1;
-
-  //       const { error } = await supabase.from("cases").insert(updateData);
-  //       if (error) throw error;
-  //       toast.success("Case added successfully");
-  //     }
-  //     setOpen(false);
-  //     loadCases();
-  //     form.reset();
-  //   } catch (error) {
-  //     console.log(error);
-  //     toast.error("Operation failed");
-  //   }
-  //   setLoading(false);
-  // }
-
   async function handleSubmit(values: CaseForm) {
     setLoading(true);
     try {
-      let updateData = {
-        ...values,
-        client_id: clientId,
-        previous_date: values.previous_date || null,
-        next_date: values.next_date || null,
+      console.log("Form values:", values);
+
+      let updateData: any = {
+        case_title: values.case_title,
+        case_description: values.case_description || null,
+        computer_code: values.computer_code || null,
+        case_proceeding: values.case_proceeding || null,
+        court_name: values.court_name || null,
+        case_decision: values.case_decision || null,
+        status: values.status,
         total_fee:
           values.total_fee === null || isNaN(values.total_fee)
             ? null
@@ -431,43 +428,79 @@ export default function ClientCasesPage() {
           values.received_fee === null || isNaN(values.received_fee)
             ? null
             : values.received_fee,
-        case_description: values.case_description || null,
-        computer_code: values.computer_code || null,
-        case_proceeding: values.case_proceeding || null,
-        court_name: values.court_name || null,
-        case_decision: values.case_decision || null,
+        client_id: clientId,
+        next_date:
+          values.next_date && isValid(new Date(values.next_date))
+            ? values.next_date
+            : null,
       };
 
-      // Convert empty strings to null for all keys
-      Object.keys(updateData).forEach((key) => {
-        if (updateData[key] === "") {
-          updateData[key] = null;
-        }
-      });
-
-      console.log("Submitting:", updateData); // Debug
+      let previous_dates: string[] = [];
 
       if (editingCase) {
-        const { data: oldCase } = await supabase
+        const { data: oldCase, error: fetchError } = await supabase
           .from("cases")
-          .select("next_date")
+          .select("next_date, previous_date")
           .eq("id", editingCase.id)
           .single();
 
-        if (oldCase && values.next_date !== oldCase.next_date) {
-          updateData.previous_date = oldCase.next_date;
+        if (fetchError) {
+          console.error("Error fetching old case:", fetchError);
+          throw new Error(`Failed to fetch case: ${fetchError.message}`);
         }
+
+        console.log("Old case data:", oldCase);
+
+        // Initialize previous_dates from existing data, ensuring it's a flat array
+        previous_dates = Array.isArray(oldCase.previous_date)
+          ? oldCase.previous_date.filter((date) => isValid(new Date(date)))
+          : oldCase.previous_date
+          ? [oldCase.previous_date].filter((date) => isValid(new Date(date)))
+          : [];
+
+        // If next_date has changed and old next_date is valid, add it to previous_dates
+        if (
+          values.next_date &&
+          oldCase.next_date &&
+          values.next_date !== oldCase.next_date &&
+          isValid(new Date(oldCase.next_date)) &&
+          !previous_dates.includes(oldCase.next_date)
+        ) {
+          previous_dates.push(oldCase.next_date);
+        }
+
+        // Add new previous_date if provided and valid
+        if (
+          values.previous_date &&
+          isValid(new Date(values.previous_date)) &&
+          !previous_dates.includes(values.previous_date)
+        ) {
+          previous_dates.push(values.previous_date);
+        }
+
+        // Sort dates in ascending order
+        previous_dates = previous_dates
+          .filter((date) => isValid(new Date(date)))
+          .sort((a, b) => Date.parse(a) - Date.parse(b));
+
+        updateData.previous_date =
+          previous_dates.length > 0 ? previous_dates : [];
+
+        console.log("Update data:", updateData);
 
         const { error } = await supabase
           .from("cases")
           .update(updateData)
           .eq("id", editingCase.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Error updating case:", error);
+          throw new Error(`Failed to update case: ${error.message}`);
+        }
         toast.success("Case updated successfully");
       } else {
         // Get next sr_no
-        const { data: maxSrNo } = await supabase
+        const { data: maxSrNo, error: srNoError } = await supabase
           .from("cases")
           .select("sr_no")
           .eq("client_id", clientId)
@@ -475,19 +508,37 @@ export default function ClientCasesPage() {
           .limit(1)
           .single();
 
+        if (srNoError && srNoError.code !== "PGRST116") {
+          console.error("Error fetching max sr_no:", srNoError);
+          throw new Error(`Failed to fetch sr_no: ${srNoError.message}`);
+        }
+
         updateData.sr_no = (maxSrNo?.sr_no || 0) + 1;
 
+        // Add new previous_date if provided and valid
+        if (values.previous_date && isValid(new Date(values.previous_date))) {
+          previous_dates.push(values.previous_date);
+        }
+
+        updateData.previous_date =
+          previous_dates.length > 0 ? previous_dates : [];
+
+        console.log("Insert data:", updateData);
+
         const { error } = await supabase.from("cases").insert(updateData);
-        if (error) throw error;
+        if (error) {
+          console.error("Error inserting case:", error);
+          throw new Error(`Failed to insert case: ${error.message}`);
+        }
         toast.success("Case added successfully");
       }
 
       setOpen(false);
       loadCases();
       form.reset();
-    } catch (error) {
-      console.log(error);
-      toast.error("Operation failed");
+    } catch (error: any) {
+      console.error("Error in handleSubmit:", error.message || error);
+      toast.error(error.message || "Operation failed");
     }
     setLoading(false);
   }
@@ -497,7 +548,7 @@ export default function ClientCasesPage() {
       setLoading(true);
       const { error } = await supabase.from("cases").delete().eq("id", id);
       if (error) {
-        toast.error("Failed to delete case");
+        toast.error("Failed to delete case: " + error.message);
       } else {
         toast.success("Case deleted successfully");
         loadCases();
@@ -507,6 +558,7 @@ export default function ClientCasesPage() {
   }
 
   function openModal(c?: Case) {
+    console.log("Opening modal with case:", c);
     if (c) {
       setEditingCase(c);
       form.reset({
@@ -516,10 +568,11 @@ export default function ClientCasesPage() {
         case_proceeding: c.case_proceeding || "",
         court_name: c.court_name || "",
         case_decision: c.case_decision || "",
-        previous_date: c.previous_date
-          ? format(c.previous_date, "yyyy-MM-dd")
-          : "",
-        next_date: c.next_date ? format(c.next_date, "yyyy-MM-dd") : "",
+        previous_date: "",
+        next_date:
+          c.next_date && isValid(new Date(c.next_date))
+            ? format(new Date(c.next_date), "yyyy-MM-dd")
+            : "",
         total_fee: c.total_fee || 0,
         received_fee: c.received_fee || 0,
       });
@@ -662,6 +715,30 @@ export default function ClientCasesPage() {
                     {editingCase ? "Edit Case" : "Add New Case"}
                   </DialogTitle>
                 </DialogHeader>
+                {editingCase && (
+                  <div className="mb-4">
+                    <label className="font-medium text-gray-700">
+                      Previous Dates History
+                    </label>
+                    <div className="bg-gray-50 p-3 rounded-md">
+                      {editingCase.previous_date?.length > 0 ? (
+                        <ul className="pl-5 list-disc">
+                          {editingCase.previous_date
+                            .filter((date) => isValid(new Date(date)))
+                            .map((date, index) => (
+                              <li key={index}>
+                                {format(new Date(date), "MMMM dd, yyyy")}
+                              </li>
+                            ))}
+                        </ul>
+                      ) : (
+                        <p className="text-gray-500">
+                          No previous dates recorded.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
                 <Form {...form}>
                   <form
                     onSubmit={form.handleSubmit(handleSubmit)}
@@ -744,7 +821,7 @@ export default function ClientCasesPage() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="font-medium text-gray-700">
-                            Previous Date
+                            Add Previous Date (optional)
                           </FormLabel>
                           <FormControl>
                             <Input type="date" {...field} />
